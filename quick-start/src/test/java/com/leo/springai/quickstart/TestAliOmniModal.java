@@ -6,16 +6,29 @@ import com.alibaba.cloud.ai.dashscope.audio.DashScopeSpeechSynthesisModel;
 import com.alibaba.cloud.ai.dashscope.audio.DashScopeSpeechSynthesisOptions;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisPrompt;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisResponse;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.dashscope.image.DashScopeImageModel;
 import com.alibaba.cloud.ai.dashscope.image.DashScopeImageOptions;
+import com.alibaba.dashscope.aigc.videosynthesis.VideoSynthesis;
+import com.alibaba.dashscope.aigc.videosynthesis.VideoSynthesisParam;
+import com.alibaba.dashscope.aigc.videosynthesis.VideoSynthesisResult;
+import com.alibaba.dashscope.exception.InputRequiredException;
+import com.alibaba.dashscope.exception.NoApiKeyException;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.audio.transcription.AudioTranscriptionPrompt;
 import org.springframework.ai.audio.transcription.AudioTranscriptionResponse;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.content.Media;
 import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.util.MimeTypeUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -82,7 +95,7 @@ public class TestAliOmniModal {
     }
 
     /**
-     * 语音文件翻译成文本
+     * 语音文件翻译成文本（暂时阿里那边有问题，返回的字段 sentenceId 不匹配）
      */
     public static final String AUDIO_RESOURCES_URL = "https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_male2.wav";
     @Test
@@ -100,5 +113,44 @@ public class TestAliOmniModal {
         AudioTranscriptionResponse response = audioTranscriptionModel.call(prompt);
 
         System.out.println(response.getResult().getOutput());
+    }
+
+    /**
+     * 多模态：传给大模型图片、语音、视频，让其去理解（语音文件暂时不行，源码中没有音频的判断支持）
+     */
+    @Test
+    public void multiModal(@Autowired DashScopeChatModel chatModel) {
+        var audioFile = new ClassPathResource("/files/pic.png");
+        Media media = new Media(MimeTypeUtils.IMAGE_PNG, audioFile);
+        DashScopeChatOptions chatOptions = DashScopeChatOptions.builder()
+                .withMultiModel(true) // 开启多模态
+                .withModel("qwen3-vl-plus") // qwen3-vl-plus 视觉理解模型
+                .build();
+        Prompt prompt = Prompt.builder()
+                .chatOptions(chatOptions)
+                .messages(UserMessage.builder()
+                        .media(media)
+                        .text("识别图片")
+                        .build())
+                .build();
+        ChatResponse response = chatModel.call(prompt);
+        System.out.println(response.getResult().getOutput().getText());
+    }
+
+    /**
+     * 文生视频：SpringAI 并没有提供对应的 API（https://docs.spring.io/spring-ai/reference/api/chatmodel.html）
+     * 所以需要使用 alibaba 原生的 sdk 来支持
+     */
+    @Test
+    public void text2Video() throws NoApiKeyException, InputRequiredException {
+        VideoSynthesis vs = new VideoSynthesis();
+        VideoSynthesisParam param = VideoSynthesisParam.builder()
+                .model("wan2.7-t2v")
+                .prompt("一只可爱的黑底白花的小猪在湖水中游泳")
+                .size("1280*720")
+                .apiKey(System.getenv("DASHSCOPE_ALI_API_KEY")) // 因为并没有用自动配置类，自然就不会使用 application.yml 中的 api-key
+                .build();
+        VideoSynthesisResult result = vs.call(param);
+        System.out.println(result.getOutput().getVideoUrl());
     }
 }
