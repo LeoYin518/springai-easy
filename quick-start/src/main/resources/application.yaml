@@ -7,3 +7,8 @@ spring:
       chat:
         options:
           model: deepseek-v4-flash
+    dashscope:
+      api-key: ${DASHSCOPE_ALI_API_KEY}
+      chat:
+        options:
+          model: qwen-plus
