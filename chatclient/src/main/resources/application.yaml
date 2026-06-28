@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: chatclient
+  ai:
+    deepseek:
+      api-key: ${DEEP_SEEK_API_KEY}
+      chat:
+        options:
+          model: deepseek-v4-flash
+    dashscope:
+      api-key: ${DASHSCOPE_ALI_API_KEY}
+      chat:
+        options:
+          model: qwen-plus
