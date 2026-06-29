@@ -2,7 +2,10 @@ package com.leo.springai.chatclient.controller;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.leo.springai.chatclient.model.PlatAndModelOptions;
+import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.PromptChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.deepseek.DeepSeekChatModel;
@@ -49,6 +52,51 @@ public class MorePlatformController {
                         .builder()
                         .model(model)
                         .temperature(temperature)
+                        .build())
+                .stream()
+                .content();
+    }
+
+    @Resource
+    ChatMemory chatMemory;
+
+    @GetMapping(value = "/memory", produces = "text/stream;charset=UTF-8")
+    public Flux<String> memory(String prompt) {
+        // 获取对应的模型
+        ChatModel chatModel = platforms.get("dashscope");
+
+        return ChatClient
+                .builder(chatModel)
+                .defaultAdvisors(PromptChatMemoryAdvisor.builder(chatMemory).build())
+                .build()
+                .prompt()
+                .user(prompt)
+                .advisors(config -> config.param(ChatMemory.CONVERSATION_ID, "sessionID-1"))
+                .options(ChatOptions
+                        .builder()
+                        .model("qwen-plus")
+                        .temperature(0.3)
+                        .build())
+                .stream()
+                .content();
+    }
+
+    @GetMapping(value = "/memory2", produces = "text/stream;charset=UTF-8")
+    public Flux<String> memory2(String prompt) {
+        // 获取对应的模型
+        ChatModel chatModel = platforms.get("dashscope");
+
+        return ChatClient
+                .builder(chatModel)
+                .defaultAdvisors(PromptChatMemoryAdvisor.builder(chatMemory).build())
+                .build()
+                .prompt()
+                .user(prompt)
+                .advisors(config -> config.param(ChatMemory.CONVERSATION_ID, "sessionID-2"))
+                .options(ChatOptions
+                        .builder()
+                        .model("qwen-plus")
+                        .temperature(0.3)
                         .build())
                 .stream()
                 .content();

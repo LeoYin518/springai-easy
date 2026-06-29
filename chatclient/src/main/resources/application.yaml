@@ -12,3 +12,7 @@ spring:
       chat:
         options:
           model: qwen-plus
+
+logging:
+  level:
+    org.springframework.ai.chat.client.advisor: debug
