@@ -1,6 +1,7 @@
 package com.leo.springai.chatclient.controller;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.leo.springai.chatclient.model.Address;
 import com.leo.springai.chatclient.model.PlatAndModelOptions;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
@@ -100,5 +101,27 @@ public class MorePlatformController {
                         .build())
                 .stream()
                 .content();
+    }
+
+    @GetMapping(value = "/structureOut")
+    public Address structureOut() {
+        // 获取对应的模型
+        ChatModel chatModel = platforms.get("dashscope");
+        return ChatClient
+                .builder(chatModel)
+                .build()
+                .prompt()
+                .system("请从以下信息中提取收货信息")
+                .user("""
+                        收货人：李白，电话：13322441111，地址：辽宁省沈阳市浑南区世纪路新秀街25号
+                        """)
+                .advisors(config -> config.param(ChatMemory.CONVERSATION_ID, "sessionID-1"))
+                .options(ChatOptions
+                        .builder()
+                        .model("qwen-plus")
+                        .temperature(0.3)
+                        .build())
+                .call()
+                .entity(Address.class); // 大模型会去根据属性名理解、赋值
     }
 }
