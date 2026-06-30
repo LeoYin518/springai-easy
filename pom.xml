@@ -26,6 +26,7 @@
     <modules>
         <module>quick-start</module>
         <module>chatclient</module>
+        <module>ticket-assistant</module>
     </modules>
 
     <dependencies>
